@@ -24,6 +24,7 @@ struct Args {
     #[arg(short = 'D', long)]
     delete_all: bool,
 
+    /// open text editor
     #[arg(short = 'v', long)]
     visual: bool,
     /// use custom filepath
@@ -32,14 +33,21 @@ struct Args {
 }
 
 fn open_editor(path: &PathBuf) {
-    let editor = env::var("EDITOR").unwrap_or_else(|_| "vim".to_string());
+    // TODO: test on windows lmao
+    let editor = env::var("EDITOR")
+        .or_else(|_| env::var("VISUAL")) // sometimes VISUAL is used
+        .unwrap_or_else(|_| {
+            if cfg!(windows) {
+                "notepad".to_string()
+            } else {
+                "vim".to_string()
+            }
+        });
 
     let _status = Command::new(editor)
         .arg(path)
         .status()
-        .expect("cant open editor");
-
-    // maybe open file and check every emtpy notes
+        .expect("can't open editor, check $EDITOR");
 }
 
 fn save_note(note: Vec<String>, path: &PathBuf) {
