@@ -1,9 +1,11 @@
 use clap::Parser;
 
+use std::env;
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Write};
 use std::panic;
 use std::path::PathBuf;
+use std::process::Command;
 use std::process::exit;
 
 #[derive(Parser, Debug)]
@@ -27,6 +29,17 @@ struct Args {
     /// use custom filepath
     #[arg(short = 'f', long)]
     filepath: Option<PathBuf>,
+}
+
+fn open_editor(path: &PathBuf) {
+    let editor = env::var("EDITOR").unwrap_or_else(|_| "vim".to_string());
+
+    let _status = Command::new(editor)
+        .arg(path)
+        .status()
+        .expect("cant open editor");
+
+    // maybe open file and check every emtpy notes
 }
 
 fn save_note(note: Vec<String>, path: &PathBuf) {
@@ -65,12 +78,6 @@ fn delete_all(path: &PathBuf) {
 
 fn delete_note(path: &PathBuf) {
     // read file
-    // let mut lines: Vec<String> = fs::read_to_string(&path)
-    //     .unwrap()
-    //     .lines()
-    //     .map(String::from)
-    //     .collect();
-
     let mut lines: Vec<String> = fs::read_to_string(&path)
         .expect("ERROR: can't open file")
         .lines()
@@ -120,19 +127,29 @@ fn delete_note(path: &PathBuf) {
 }
 
 fn main() {
-    let args = Args::parse();
+    let args = {
+        let mut raw_args: Vec<String> = env::args().collect();
+
+        // use --list if no argument provided
+        if raw_args.len() == 1 {
+            raw_args.push("--list".to_string());
+        }
+
+        Args::parse_from(raw_args)
+    };
 
     // get custom filepath
     let path = match args.filepath {
         Some(path) => path,
         // default file path
-        None => PathBuf::from("./notes"),
+        None => PathBuf::from("/home/felix/.new_notes"),
     };
 
     // check filepath
     if !path.is_file() {
         println!("INFO: file doesnt exist");
-        exit(1);
+        println!("INFO: creating file: {:?}", &path);
+        File::create(&path).expect("created file");
     }
 
     if let Some(note) = args.note {
@@ -145,6 +162,6 @@ fn main() {
     } else if args.delete_all {
         delete_all(&path);
     } else if args.visual {
-        println!("visual?");
+        open_editor(&path);
     }
 }
