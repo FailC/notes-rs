@@ -24,7 +24,7 @@ struct Args {
     #[arg(short = 'D', long)]
     delete_all: bool,
 
-    /// open text editor
+    /// open notes in text editor
     #[arg(short = 'v', long)]
     visual: bool,
     /// use custom filepath
@@ -35,7 +35,7 @@ struct Args {
 fn open_editor(path: &PathBuf) {
     // TODO: test on windows lmao
     let editor = env::var("EDITOR")
-        .or_else(|_| env::var("VISUAL")) // sometimes VISUAL is used
+        .or_else(|_| env::var("VISUAL"))
         .unwrap_or_else(|_| {
             if cfg!(windows) {
                 "notepad".to_string()
@@ -146,11 +146,30 @@ fn main() {
         Args::parse_from(raw_args)
     };
 
+    let base_dir = PathBuf::from("my_data"); // Could be relative or absolute
+    let filename = "output.txt";
+
+    let file_path = base_dir.join(filename);
+
+    println!("File path: {:?}", file_path);
+
     // get custom filepath
     let path = match args.filepath {
         Some(path) => path,
         // default file path
-        None => PathBuf::from("/home/felix/.new_notes"),
+        //
+        None => {
+            if let Some(mut path) = dirs::home_dir() {
+                path.push(".new_notes");
+                path
+            } else {
+                panic!("can't find home directory");
+            }
+            // PathBuf::from("/home/felix/.new_notes");
+        } // None => {
+          //     // let path = dirs::home_dir();
+          //     let file_name = PathBuf::from(".new_notes");
+          // }
     };
 
     // check filepath
