@@ -1,5 +1,4 @@
 use clap::Parser;
-
 use std::env;
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Write};
@@ -33,7 +32,6 @@ struct Args {
 }
 
 fn open_editor(path: &PathBuf) {
-    // TODO: test on windows lmao
     let editor = env::var("EDITOR")
         .or_else(|_| env::var("VISUAL"))
         .unwrap_or_else(|_| {
@@ -47,7 +45,7 @@ fn open_editor(path: &PathBuf) {
     let _status = Command::new(editor)
         .arg(path)
         .status()
-        .expect("can't open editor, check $EDITOR");
+        .expect("can't open default editor, check $EDITOR");
 }
 
 fn save_note(note: Vec<String>, path: &PathBuf) {
@@ -78,8 +76,6 @@ fn list_note(path: &PathBuf) {
 }
 
 fn delete_all(path: &PathBuf) {
-    // check if file exist, if not don't create new file
-    // does happen in main
     let _file = File::create(&path).expect("can't delete notes");
     // println!("deleting all notes..");
 }
@@ -129,20 +125,18 @@ fn delete_note(path: &PathBuf) {
         return;
     }
     file.write_all(content.as_bytes())
-        .expect("can't write to file");
+        .expect("ERROR:can't write to file");
     file.write_all("\n".as_bytes())
-        .expect("can't write to file");
+        .expect("ERROR: can't write to file");
 }
 
 fn main() {
     let args = {
         let mut raw_args: Vec<String> = env::args().collect();
-
         // use --list if no argument provided
         if raw_args.len() == 1 {
             raw_args.push("--list".to_string());
         }
-
         Args::parse_from(raw_args)
     };
 
@@ -157,7 +151,6 @@ fn main() {
     let path = match args.filepath {
         Some(path) => path,
         // default file path
-        //
         None => {
             if let Some(mut path) = dirs::home_dir() {
                 path.push(".new_notes");
@@ -165,11 +158,7 @@ fn main() {
             } else {
                 panic!("can't find home directory");
             }
-            // PathBuf::from("/home/felix/.new_notes");
-        } // None => {
-          //     // let path = dirs::home_dir();
-          //     let file_name = PathBuf::from(".new_notes");
-          // }
+        }
     };
 
     // check filepath
