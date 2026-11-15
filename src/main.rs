@@ -36,31 +36,32 @@ fn open_editor(path: &PathBuf) {
         .or_else(|_| env::var("VISUAL"))
         .unwrap_or_else(|_| {
             if cfg!(windows) {
-                "notepad".to_string()
+                "notepad".to_string() // don't use windows
             } else {
-                "vim".to_string()
+                "vim".to_string() // use :wq to save and quit
             }
         });
 
     let _status = Command::new(editor)
         .arg(path)
         .status()
-        .expect("can't open default editor, check $EDITOR");
+        .expect("ERROR: can't open default editor, check $EDITOR");
 }
 
 fn save_note(note: Vec<String>, path: &PathBuf) {
     // check if file exists
-    let file = match fs::metadata(&path).is_ok() {
+    let file = match fs::metadata(path).is_ok() {
         true => OpenOptions::new().append(true).open(path),
         false => {
-            println!("created file: {:?}", &path);
-            File::create(&path)
+            println!("created file: {path:?}");
+            File::create(path)
         }
     };
     let Ok(mut file) = file else {
         panic!("ERROR: can't open file");
     };
     let note = note.join(" ");
+
     file.write_all(note.as_bytes())
         .expect("ERROR: can't write to file");
     file.write_all("\n".as_bytes())
@@ -68,7 +69,7 @@ fn save_note(note: Vec<String>, path: &PathBuf) {
 }
 
 fn list_note(path: &PathBuf) {
-    let content = fs::read_to_string(&path).expect("ERROR: can't read content");
+    let content = fs::read_to_string(path).expect("ERROR: can't read content");
     let lines = content.lines();
     for line in lines {
         println!("{line}");
@@ -76,13 +77,13 @@ fn list_note(path: &PathBuf) {
 }
 
 fn delete_all(path: &PathBuf) {
-    let _file = File::create(&path).expect("can't delete notes");
+    let _file = File::create(path).expect("ERROR: can't delete notes");
     // println!("deleting all notes..");
 }
 
 fn delete_note(path: &PathBuf) {
     // read file
-    let mut lines: Vec<String> = fs::read_to_string(&path)
+    let mut lines: Vec<String> = fs::read_to_string(path)
         .expect("ERROR: can't open file")
         .lines()
         .map(String::from)
@@ -95,10 +96,12 @@ fn delete_note(path: &PathBuf) {
         .for_each(|(i, line)| println!("{}: {}", i + 1, line));
 
     print!("Select note to delete: ");
-    io::stdout().flush().expect("can't flush buffer");
+    io::stdout().flush().expect("ERROR: can't flush buffer");
 
     let mut input = String::new();
-    io::stdin().read_line(&mut input).expect("can't read input");
+    io::stdin()
+        .read_line(&mut input)
+        .expect("ERROR: can't read input");
 
     // delete line
     let mut numbers: Vec<usize> = input
@@ -108,12 +111,13 @@ fn delete_note(path: &PathBuf) {
         .collect();
     numbers.sort_by(|a, b| b.cmp(a));
 
+    // -1 for user input from 1..
     numbers.iter().for_each(|num| {
         lines.remove(num - 1);
     });
 
     // save file
-    let file = File::create(&path);
+    let file = File::create(path);
 
     let Ok(mut file) = file else {
         eprintln!("ERROR: can't open file");
@@ -125,7 +129,7 @@ fn delete_note(path: &PathBuf) {
         return;
     }
     file.write_all(content.as_bytes())
-        .expect("ERROR:can't write to file");
+        .expect("ERROR: can't write to file");
     file.write_all("\n".as_bytes())
         .expect("ERROR: can't write to file");
 }
@@ -134,18 +138,20 @@ fn main() {
     let args = {
         let mut raw_args: Vec<String> = env::args().collect();
         // use --list if no argument provided
+        // (called by just typing "notes")
+        // problem when writing "notes -f" --list must provided as well, not good
+        // but: notes -f "stuff" doesn't want to use -l
         if raw_args.len() == 1 {
             raw_args.push("--list".to_string());
         }
         Args::parse_from(raw_args)
     };
 
-    let base_dir = PathBuf::from("my_data"); // Could be relative or absolute
-    let filename = "output.txt";
-
-    let file_path = base_dir.join(filename);
-
-    println!("File path: {:?}", file_path);
+    // what was i thinking here?
+    // let base_dir = PathBuf::from("my_data"); // Could be relative or absolute
+    // let filename = "output.txt";
+    // let _file_path = base_dir.join(filename);
+    // println!("File path: {file_path:?}");
 
     // get custom filepath
     let path = match args.filepath {
@@ -153,17 +159,18 @@ fn main() {
         // default file path
         None => {
             if let Some(mut path) = dirs::home_dir() {
-                path.push(".new_notes");
+                path.push(".notes-rs");
                 path
             } else {
-                panic!("can't find home directory");
+                panic!("ERROR: can't find home directory");
             }
         }
     };
 
     // check filepath
     if !path.is_file() {
-        println!("INFO: file doesnt exist");
+        println!("INFO: file doesn't exist");
+        //TODO creates new file, even if user maybe didnt want to
         println!("INFO: creating file: {:?}", &path);
         File::create(&path).expect("created file");
     }
