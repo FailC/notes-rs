@@ -23,7 +23,7 @@ Rust needs to be installed -> see rust-lang.org
 
 Linux / macOS:
 ```
-git clone https://github.com/FailC/notes.git
+git clone https://github.com/FailC/notes-rs.git
 cd notes-rs
 cargo build --release
 mv ./target/release/notes /usr/local/bin
